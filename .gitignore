@@ -12,3 +12,8 @@ monotonic_align/monotonic_align
 /.vs/vits/FileContentIndex
 configs/dracu_japanese_base2.json
 configs/tolove_japanese_base2.json
+data/**/*.*
+cp2077*
+qs_*
+models/**
+output/**

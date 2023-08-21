@@ -43,16 +43,6 @@ torch.backends.cudnn.benchmark = True
 global_step = 0
 
 
-def main():
-  """Assume Single Node Multi GPUs Training Only"""
-  assert torch.cuda.is_available(), "CPU training is not allowed."
-
-  n_gpus = torch.cuda.device_count()
-  os.environ['MASTER_ADDR'] = 'localhost'
-  os.environ['MASTER_PORT'] = '8000'
-
-  hps = utils.get_hparams()
-  mp.spawn(run, nprocs=n_gpus, args=(n_gpus, hps,))
 
 
 def run(rank, n_gpus, hps):
@@ -64,7 +54,7 @@ def run(rank, n_gpus, hps):
     writer = SummaryWriter(log_dir=hps.model_dir)
     writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval"))
 
-  dist.init_process_group(backend='nccl', init_method='env://', world_size=n_gpus, rank=rank)
+  dist.init_process_group(backend='gloo', init_method='env://', world_size=n_gpus, rank=rank)
   torch.manual_seed(hps.train.seed)
   torch.cuda.set_device(rank)
 
@@ -77,12 +67,12 @@ def run(rank, n_gpus, hps):
       rank=rank,
       shuffle=True)
   collate_fn = TextAudioSpeakerCollate()
-  train_loader = DataLoader(train_dataset, num_workers=8, shuffle=False, pin_memory=True,
+  train_loader = DataLoader(train_dataset, num_workers=8, shuffle=False, pin_memory=False,
       collate_fn=collate_fn, batch_sampler=train_sampler)
   if rank == 0:
     eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
     eval_loader = DataLoader(eval_dataset, num_workers=8, shuffle=False,
-        batch_size=hps.train.batch_size, pin_memory=True,
+        batch_size=hps.train.batch_size, pin_memory=False,
         drop_last=False, collate_fn=collate_fn)
 
   net_g = SynthesizerTrn(
@@ -125,6 +115,7 @@ def run(rank, n_gpus, hps):
       train_and_evaluate(rank, epoch, hps, [net_g, net_d], [optim_g, optim_d], [scheduler_g, scheduler_d], scaler, [train_loader, None], None, None)
     scheduler_g.step()
     scheduler_d.step()
+
 
 
 def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loaders, logger, writers):
@@ -300,6 +291,18 @@ def evaluate(hps, generator, eval_loader, writer_eval):
     )
     generator.train()
 
-                           
+
+def main():
+  """Assume Single Node Multi GPUs Training Only"""
+  assert torch.cuda.is_available(), "CPU training is not allowed."
+
+  n_gpus = 1#torch.cuda.device_count()
+  os.environ['MASTER_ADDR'] = 'localhost'
+  os.environ['MASTER_PORT'] = '8100'
+
+  hps = utils.get_hparams()
+  mp.spawn(run, nprocs=n_gpus, args=(n_gpus, hps,))
+  #run(0,n_gpus, hps)
+
 if __name__ == "__main__":
   main()

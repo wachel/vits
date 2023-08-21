@@ -1,0 +1,3 @@
+python preprocess.py --text_index 2 --filelists filelists/qs_train_filelist.txt filelists/qs_val_filelist.txt --text_cleaners chinese_cleaners
+
+python train_ms.py -c configs/chinese_base.json -m model_qs
