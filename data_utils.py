@@ -198,7 +198,8 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         text = self.get_text(text)
         spec, wav = self.get_audio(audiopath)
         sid = self.get_sid(sid)
-        return (text, spec, wav, sid)
+        w2v_feature = self.get_wav2vec_feature(audiopath)
+        return (text, spec, wav, sid, w2v_feature)
 
     def get_audio(self, filename):
         audio, sampling_rate = load_wav_to_torch(filename)
@@ -217,6 +218,10 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             spec = torch.squeeze(spec, 0)
             torch.save(spec, spec_filename)
         return spec, audio_norm
+
+    def get_wav2vec_feature(self, filename):
+        w2vh_path = os.path.splitext(filename)[0] + '.w2v_hm.pt'
+        return torch.load(w2vh_path)
 
     def get_text(self, text):
         if self.cleaned_text:
@@ -268,9 +273,11 @@ class TextAudioSpeakerCollate():
         text_padded = torch.LongTensor(len(batch), max_text_len)
         spec_padded = torch.FloatTensor(len(batch), batch[0][1].size(0), max_spec_len)
         wav_padded = torch.FloatTensor(len(batch), 1, max_wav_len)
+        w2v_feature = torch.FloatTensor(len(batch), 768)
         text_padded.zero_()
         spec_padded.zero_()
         wav_padded.zero_()
+        w2v_feature.zero_()
         for i in range(len(ids_sorted_decreasing)):
             row = batch[ids_sorted_decreasing[i]]
 
@@ -288,9 +295,11 @@ class TextAudioSpeakerCollate():
 
             sid[i] = row[3]
 
+            w2v_feature[i] = row[4]
+
         if self.return_ids:
-            return text_padded, text_lengths, spec_padded, spec_lengths, wav_padded, wav_lengths, sid, ids_sorted_decreasing
-        return text_padded, text_lengths, spec_padded, spec_lengths, wav_padded, wav_lengths, sid
+            return text_padded, text_lengths, spec_padded, spec_lengths, wav_padded, wav_lengths, sid, ids_sorted_decreasing, w2v_feature
+        return text_padded, text_lengths, spec_padded, spec_lengths, wav_padded, wav_lengths, sid, w2v_feature
 
 
 class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
