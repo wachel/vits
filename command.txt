@@ -1,3 +1,6 @@
 python preprocess.py --text_index 2 --filelists filelists/qs_train_filelist.txt filelists/qs_val_filelist.txt --text_cleaners chinese_cleaners
 
-python train_ms.py -c configs/chinese_base.json -m model_qs
+python train_ms.py -c configs/chinese_base.json -m model_no_spk
+
+,
+"args": ["-c", "configs/chinese_base.json", "-m", "models/model_no_spk"]
