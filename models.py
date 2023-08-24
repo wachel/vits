@@ -454,7 +454,8 @@ class SynthesizerTrn(nn.Module):
       self.dp = DurationPredictor(hidden_channels, 256, 3, 0.5, gin_channels=gin_channels)
 
     #if n_speakers > 1:
-    #  self.emb_g = nn.Embedding(n_speakers, gin_channels)
+      #self.emb_g = nn.Embedding(n_speakers, gin_channels)
+    #self.w2v_fc = nn.Linear(768, gin_channels)
 
   def forward(self, x, x_lengths, y, y_lengths, sid, w2v_feature):
 
@@ -463,8 +464,9 @@ class SynthesizerTrn(nn.Module):
     #  g = self.emb_g(sid).unsqueeze(-1) # [b, h, 1]
     #else:
     #  g = None
-
-    g = w2v_feature.unsqueeze(-1)# [b, h, 1]
+    
+    #g = self.w2v_fc(w2v_feature).unsqueeze(-1)  
+    g = w2v_feature.unsqueeze(-1)
 
     z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=g)
     z_p = self.flow(z, y_mask, g=g)
@@ -504,6 +506,7 @@ class SynthesizerTrn(nn.Module):
     #  g = self.emb_g(sid).unsqueeze(-1) # [b, h, 1]
     # else:
     #  g = None
+    #g = self.w2v_fc(w2v_feature).unsqueeze(-1)  
     g = w2v_feature.unsqueeze(-1)
 
     if self.use_sdp:
