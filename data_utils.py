@@ -209,9 +209,13 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         audio_norm = audio / self.max_wav_value
         audio_norm = audio_norm.unsqueeze(0)
         spec_filename = filename.replace(".wav", ".spec.pt")
+        spec = None
         if os.path.exists(spec_filename):
-            spec = torch.load(spec_filename)
-        else:
+            try:
+                spec = torch.load(spec_filename)
+            except:
+                print('load fail ', spec_filename)
+        if spec == None:
             spec = spectrogram_torch(audio_norm, self.filter_length,
                 self.sampling_rate, self.hop_length, self.win_length,
                 center=False)
@@ -220,8 +224,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         return spec, audio_norm
 
     def get_wav2vec_feature(self, filename):
-        w2vh_path = os.path.splitext(filename)[0] + '.w2v_hm.pt'
-        return torch.load(w2vh_path)
+        w2vh_path = os.path.splitext(filename)[0] + '.w2v_hm.npy'
+        x = torch.from_numpy(np.load(w2vh_path))
+        return x
 
     def get_text(self, text):
         if self.cleaned_text:
